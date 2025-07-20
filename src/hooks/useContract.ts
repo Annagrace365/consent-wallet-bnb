@@ -94,6 +94,7 @@ export const useContract = (provider: ethers.BrowserProvider | null, account: st
           }
         }
       }
+      
       // Store last issued consent in localStorage for extension activation
       if (tokenId) {
         localStorage.setItem('lastIssuedConsent', JSON.stringify({
@@ -102,16 +103,27 @@ export const useContract = (provider: ethers.BrowserProvider | null, account: st
           site: window.location.hostname,
           timestamp: Date.now()
         }));
+        
+        // Notify extension about consent issuance
+        if (window.chrome && window.chrome.runtime) {
+          try {
+            window.chrome.runtime.sendMessage({
+              action: 'consentIssued',
+              data: {
+                tokenId,
+                status: 'Pending',
+                siteName: data.website || window.location.hostname,
+                purpose: data.purpose,
+                expiryDate: data.expiryDate,
+                recipient: data.recipient,
+                dataFields: data.dataFields
+              }
+            });
+          } catch (e) {
+            console.log('Extension not available:', e);
+          }
+        }
       }
-      
-      // Notify extension about consent issuance
-      window.postMessage({ 
-        type: 'ConsentIssued', 
-        tokenId, 
-        status: 'Pending',
-        site: window.location.hostname,
-        timestamp: Date.now()
-      }, '*');
       
       await fetchConsents(); // Refresh consents after minting
     } catch (error) {

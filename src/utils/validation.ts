@@ -29,13 +29,13 @@ export const validateConsentForm = (data: ConsentFormData): { isValid: boolean; 
   } else {
     const expiryDate = new Date(data.expiryDate);
     const now = new Date();
-    const minDate = new Date(now.getTime() + 60 * 60 * 1000); // At least 1 hour from now
+    const minDate = new Date(now.getTime() + 10 * 60 * 1000); // At least 10 minutes from now
     const maxDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // Max 1 year from now
 
     if (expiryDate <= now) {
       errors.expiryDate = 'Expiry date must be in the future';
     } else if (expiryDate < minDate) {
-      errors.expiryDate = 'Expiry date must be at least 1 hour from now';
+      errors.expiryDate = 'Expiry date must be at least 10 minutes from now';
     } else if (expiryDate > maxDate) {
       errors.expiryDate = 'Expiry date cannot be more than 1 year from now';
     }

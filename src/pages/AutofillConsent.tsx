@@ -1,28 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Shield, Globe, User, FileText, Calendar, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Shield, Globe, User, FileText, Calendar, CheckCircle, AlertTriangle, ExternalLink, Send } from 'lucide-react';
 import { normalizeAddress } from '../utils/addressUtils';
 import { useWallet } from '../contexts/WalletContext';
+import { useContract } from '../hooks/useContract';
 import { assessPrivacyRisk, DataCollectionRequest } from '../utils/privacyRiskAssessment';
 import { PrivacyRiskIndicator } from '../components/PrivacyRiskIndicator';
+import { ConsentFormData } from '../types';
 
 export default function ShareData() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { account, isConnected } = useWallet();
+  const { wallet, provider } = useWallet();
+  const { mintConsent, loading, contractError } = useContract(provider, wallet.account, wallet.isCorrectNetwork);
   
   const [formData, setFormData] = useState({
     recipient: '',
     purpose: '',
-    fields: [],
+    fields: [] as string[],
     expiryDate: '',
     privacyUrl: '',
     sourceUrl: '',
-    siteName: ''
+    siteName: '',
+    returnUrl: ''
   });
 
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   // Generate privacy risk assessment
   const getPrivacyRiskAssessment = () => {
@@ -49,7 +53,8 @@ export default function ShareData() {
     const fields = searchParams.get('fields');
     const privacyUrl = searchParams.get('privacyUrl');
     const sourceUrl = searchParams.get('sourceUrl');
-    const expiryDate = searchParams.get('expiryDate'); // If you want to support expiry autofill
+    const returnUrl = searchParams.get('returnUrl');
+    const expiryDate = searchParams.get('expiryDate');
 
     const parsedFields = fields
       ? fields.split(',').map(field => field.trim()).filter(Boolean)
@@ -63,16 +68,21 @@ export default function ShareData() {
       privacyUrl: privacyUrl || '',
       sourceUrl: sourceUrl || '',
       siteName: site || serviceName || '',
-      expiryDate: expiryDate || '', // Only autofills if present in URL
+      expiryDate: expiryDate || '',
+      returnUrl: returnUrl || ''
     }));
   }, [searchParams]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleSubmit called. formData:', formData);
     
-    if (!isConnected) {
+    if (!wallet.isConnected) {
       setError('Please connect your wallet first');
+      return;
+    }
+
+    if (!wallet.isCorrectNetwork) {
+      setError('Please switch to BNB Smart Chain Testnet');
       return;
     }
 
@@ -81,26 +91,37 @@ export default function ShareData() {
       return;
     }
 
-    setIsLoading(true);
+    if (!formData.expiryDate) {
+      setError('Please select an expiry date');
+      return;
+    }
+
     setError('');
 
     try {
-      // Here you would implement the actual data sharing logic
-      // This could involve smart contract interactions, IPFS uploads, etc.
+      const consentFormData: ConsentFormData = {
+        recipient: formData.recipient,
+        purpose: formData.purpose,
+        expiryDate: formData.expiryDate,
+        website: formData.sourceUrl || formData.siteName,
+        dataFields: formData.fields.join(', ')
+      };
+
+      await mintConsent(consentFormData);
+      setSuccess(true);
       
-      console.log('Sharing data:', formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Navigate to success page or show success message
-      navigate('/dashboard?shared=true');
+      // Redirect after success
+      setTimeout(() => {
+        if (formData.returnUrl) {
+          window.location.href = formData.returnUrl;
+        } else {
+          navigate('/my-consents');
+        }
+      }, 2000);
       
     } catch (err) {
-      setError('Failed to share data. Please try again.');
-      console.error('Share data error:', err);
-    } finally {
-      setIsLoading(false);
+      setError('Failed to issue consent token. Please try again.');
+      console.error('Consent issuance error:', err);
     }
   };
 
@@ -119,7 +140,7 @@ export default function ShareData() {
     { id: 'personal information', label: 'Personal Information', icon: FileText },
   ];
 
-  const toggleField = (fieldId) => {
+  const toggleField = (fieldId: string) => {
     setFormData(prev => ({
       ...prev,
       fields: prev.fields.includes(fieldId)
@@ -131,36 +152,45 @@ export default function ShareData() {
   const isFormValid = formData.recipient && formData.purpose && formData.fields.length > 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
+    <div className="max-w-2xl mx-auto">
+      {success && (
+        <div className="mb-6 flex items-center space-x-3 p-4 bg-orange-500 bg-opacity-20 border border-orange-500 border-opacity-30 rounded-lg shadow-lg shadow-orange-500/20">
+          <CheckCircle className="h-6 w-6 text-orange-400" />
+          <div>
+            <p className="text-orange-400 font-semibold">Consent Token Issued Successfully!</p>
+            <p className="text-orange-300 text-sm">Your consent token has been minted on the blockchain.</p>
+          </div>
+        </div>
+      )}
+
+      <div className="backdrop-blur-md bg-white bg-opacity-5 rounded-2xl border border-orange-500 border-opacity-20 shadow-2xl shadow-orange-500/10">
+        <div className="px-6 py-4 border-b border-orange-500 border-opacity-20">
             <div className="flex items-center space-x-3">
-              <Shield className="h-6 w-6 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">Share Personal Data</h1>
+              <Shield className="h-6 w-6 text-orange-400" />
+              <h1 className="text-xl font-semibold text-orange-200">Issue Consent Token</h1>
             </div>
-            <p className="mt-2 text-sm text-gray-600">
-              Securely share your personal information with verified recipients
+            <p className="mt-2 text-sm text-orange-300">
+              Create a blockchain-based consent token for this data sharing request
             </p>
           </div>
 
           {/* Privacy Risk Assessment */}
           {riskAssessment && (
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-orange-500 border-opacity-20">
               <PrivacyRiskIndicator assessment={riskAssessment} />
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {error && (
-              <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                <span className="text-sm text-red-700">{error}</span>
+              <div className="flex items-center space-x-2 p-3 bg-red-500 bg-opacity-20 border border-red-500 border-opacity-30 rounded-md">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <span className="text-sm text-red-300">{error}</span>
               </div>
             )}
 
             <div>
-              <label htmlFor="recipient" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="recipient" className="block text-sm font-medium text-orange-200 mb-2">
                 Recipient Address *
               </label>
               <input
@@ -168,14 +198,14 @@ export default function ShareData() {
                 id="recipient"
                 value={formData.recipient}
                 onChange={(e) => setFormData(prev => ({ ...prev, recipient: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-4 py-3 bg-white bg-opacity-5 rounded-lg border border-orange-500 border-opacity-30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200 shadow-inner"
                 placeholder="0x..."
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="purpose" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="purpose" className="block text-sm font-medium text-orange-200 mb-2">
                 Purpose of Data Sharing *
               </label>
               <textarea
@@ -183,14 +213,14 @@ export default function ShareData() {
                 value={formData.purpose}
                 onChange={(e) => setFormData(prev => ({ ...prev, purpose: e.target.value }))}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-4 py-3 bg-white bg-opacity-5 rounded-lg border border-orange-500 border-opacity-30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200 resize-none shadow-inner"
                 placeholder="Describe why you're sharing this data..."
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-orange-200 mb-3">
                 Data Fields to Share *
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -205,8 +235,8 @@ export default function ShareData() {
                       onClick={() => toggleField(field.id)}
                       className={`flex items-center space-x-3 p-3 border rounded-md transition-colors ${
                         isSelected
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-gray-300 hover:border-gray-400'
+                          ? 'border-orange-500 bg-orange-500 bg-opacity-20 text-orange-300'
+                          : 'border-orange-500 border-opacity-30 hover:border-orange-400 text-orange-200'
                       }`}
                     >
                       <Icon className="h-5 w-5" />
@@ -219,33 +249,31 @@ export default function ShareData() {
             </div>
 
             <div>
-              <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700 mb-2">
-                Access Expiry Date
+              <label htmlFor="expiryDate" className="block text-sm font-medium text-orange-200 mb-2">
+                Access Expiry Date *
               </label>
               <input
-                type="date"
+                type="datetime-local"
                 id="expiryDate"
                 value={formData.expiryDate}
                 onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                className="w-full px-4 py-3 bg-white bg-opacity-5 rounded-lg border border-orange-500 border-opacity-30 text-white focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200 shadow-inner"
                 min={new Date().toISOString().split('T')[0]}
+                required
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Leave empty for permanent access
-              </p>
             </div>
 
             {formData.privacyUrl && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="p-4 bg-orange-500 bg-opacity-10 border border-orange-500 border-opacity-30 rounded-md">
                 <div className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-900">Privacy Policy</span>
+                  <FileText className="h-5 w-5 text-orange-400" />
+                  <span className="text-sm font-medium text-orange-200">Privacy Policy</span>
                 </div>
                 <a
                   href={formData.privacyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center space-x-1 text-sm text-blue-700 hover:text-blue-800"
+                  className="mt-2 inline-flex items-center space-x-1 text-sm text-orange-300 hover:text-orange-200"
                 >
                   <span>Review privacy policy</span>
                   <ExternalLink className="h-4 w-4" />
@@ -254,12 +282,12 @@ export default function ShareData() {
             )}
 
             {formData.siteName && (
-              <div className="p-4 bg-orange-50 border border-orange-200 rounded-md">
+              <div className="p-4 bg-orange-500 bg-opacity-10 border border-orange-500 border-opacity-30 rounded-md">
                 <div className="flex items-center space-x-2">
-                  <Shield className="h-5 w-5 text-orange-600" />
-                  <span className="text-sm font-medium text-orange-900">Consent Detection</span>
+                  <Shield className="h-5 w-5 text-orange-400" />
+                  <span className="text-sm font-medium text-orange-200">Consent Detection</span>
                 </div>
-                <p className="mt-2 text-sm text-orange-700">
+                <p className="mt-2 text-sm text-orange-300">
                   This consent was detected from your interaction on <strong>{formData.siteName}</strong>. 
                   Review the details and set an expiry date to issue your blockchain consent token.
                 </p>
@@ -267,16 +295,16 @@ export default function ShareData() {
             )}
 
             {formData.sourceUrl && (
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-md">
+              <div className="p-4 bg-white bg-opacity-5 border border-orange-500 border-opacity-20 rounded-md">
                 <div className="flex items-center space-x-2">
-                  <Globe className="h-5 w-5 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-900">Source Application</span>
+                  <Globe className="h-5 w-5 text-orange-400" />
+                  <span className="text-sm font-medium text-orange-200">Source Application</span>
                 </div>
                 <a
                   href={formData.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center space-x-1 text-sm text-gray-700 hover:text-gray-800"
+                  className="mt-2 inline-flex items-center space-x-1 text-sm text-orange-300 hover:text-orange-200"
                 >
                   <span>Visit source application</span>
                   <ExternalLink className="h-4 w-4" />
@@ -287,22 +315,32 @@ export default function ShareData() {
             <div className="flex space-x-4 pt-4">
               <button
                 type="button"
-                onClick={() => navigate('/dashboard')}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                onClick={() => navigate('/')}
+                className="flex-1 px-4 py-3 border border-orange-500 border-opacity-30 rounded-lg text-orange-200 hover:bg-white hover:bg-opacity-5 focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all duration-200"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={!isFormValid}
-                className={`w-full py-3 px-6 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 ${!isFormValid ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={loading || !isFormValid || !wallet.isConnected || !wallet.isCorrectNetwork}
+                className={`flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg font-semibold text-black transition-all duration-200 transform shadow-lg shadow-orange-500/30 ${
+                  loading || !isFormValid || !wallet.isConnected || !wallet.isCorrectNetwork
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:from-orange-400 hover:to-yellow-400 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/40'
+                }`}
               >
-                {isLoading ? 'Sharing...' : 'Share Data'}
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                ) : (
+                  <>
+                    <Send className="h-5 w-5" />
+                    <span>Issue Consent Token</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
         </div>
-      </div>
     </div>
   );
 }

@@ -20,6 +20,9 @@ export const IssueConsent: React.FC = () => {
   const dataFields = searchParams.get('fields') || '';
   const expiryDate = searchParams.get('expiryDate') || '';
   const returnUrl = searchParams.get('returnUrl') || '';
+  
+  // Set default expiry date to 1 year from now if not provided
+  const defaultExpiryDate = expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -36,7 +39,7 @@ export const IssueConsent: React.FC = () => {
         onSubmit={mintConsent}
         loading={loading}
         contractError={contractError}
-        autofill={{ recipient, purpose, website, dataFields, expiryDate, returnUrl }}
+        autofill={{ recipient, purpose, website, dataFields, expiryDate: defaultExpiryDate, returnUrl }}
       />
 
       <div className="backdrop-blur-md bg-white bg-opacity-5 rounded-2xl p-8 border border-orange-500 border-opacity-10 shadow-lg shadow-orange-500/10">

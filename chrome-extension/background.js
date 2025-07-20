@@ -108,7 +108,6 @@ class ConsentWalletBackground {
     const { consentTokens = [] } = await chrome.storage.local.get(['consentTokens']);
     consentTokens.push({
       ...consentData,
-      status: 'Pending',
       issuedAt: Date.now(),
       tabId: tab?.id || null // Store the tabId where consent was issued
     });
@@ -124,7 +123,7 @@ class ConsentWalletBackground {
       type: 'basic',
       iconUrl: 'icons/icon48.png',
       title: 'Consent Token Issued',
-      message: `Blockchain consent token created for ${consentData.siteName}`
+      message: `Blockchain consent token created for ${consentData.siteName || 'website'}`
     });
   }
   

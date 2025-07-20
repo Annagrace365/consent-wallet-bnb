@@ -6,12 +6,14 @@ import { Home } from './pages/Home';
 import { IssueConsent } from './pages/IssueConsent';
 import { MyConsents } from './pages/MyConsents';
 import AutofillConsent from './pages/AutofillConsent';
+import { ConsentDetector } from './components/ConsentDetector';
 
 function App() {
   return (
     <WalletProvider>
       <Router>
         <Layout>
+          <ConsentDetector />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/issue" element={<IssueConsent />} />

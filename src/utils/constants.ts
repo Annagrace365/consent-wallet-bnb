@@ -1,5 +1,5 @@
 // Replace these placeholders with your actual deployed contract details
-export const CONTRACT_ADDRESS = "0xB9381DE15e23099AFBca771fB3F0136394e232C8".toLowerCase();
+export const CONTRACT_ADDRESS = "0xB9381DE15e23099AFBca771fB3F0136394e232C8";
 
 // Replace this with your actual contract ABI from the deployment
 export const CONTRACT_ABI = [

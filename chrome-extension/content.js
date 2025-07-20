@@ -265,8 +265,8 @@ class ConsentDetector {
           consent.timestamp > tenMinutesAgo) {
         return consent;
       }
-    } catch (e) {}
       console.error('Error getting pending consent:', e);
+    }
     return null;
   }
   
