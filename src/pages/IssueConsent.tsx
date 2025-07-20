@@ -17,6 +17,8 @@ export const IssueConsent: React.FC = () => {
   const recipient = searchParams.get('to') || '';
   const purpose = searchParams.get('purpose') || '';
   const website = searchParams.get('website') || '';
+  const websiteUrl = searchParams.get('websiteUrl') || '';
+  const siteName = searchParams.get('siteName') || '';
   const dataFields = searchParams.get('fields') || '';
   const expiryDate = searchParams.get('expiryDate') || '';
   const returnUrl = searchParams.get('returnUrl') || '';
@@ -39,7 +41,14 @@ export const IssueConsent: React.FC = () => {
         onSubmit={mintConsent}
         loading={loading}
         contractError={contractError}
-        autofill={{ recipient, purpose, website, dataFields, expiryDate: defaultExpiryDate, returnUrl }}
+        autofill={{ 
+          recipient, 
+          purpose, 
+          website: websiteUrl || website, 
+          dataFields, 
+          expiryDate: defaultExpiryDate, 
+          returnUrl 
+        }}
       />
 
       <div className="backdrop-blur-md bg-white bg-opacity-5 rounded-2xl p-8 border border-orange-500 border-opacity-10 shadow-lg shadow-orange-500/10">

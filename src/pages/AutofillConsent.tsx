@@ -22,7 +22,8 @@ export default function ShareData() {
     privacyUrl: '',
     sourceUrl: '',
     siteName: '',
-    returnUrl: ''
+    returnUrl: '',
+    websiteUrl: ''
   });
 
   const [error, setError] = useState('');
@@ -49,10 +50,12 @@ export default function ShareData() {
     const to = searchParams.get('to');
     const site = searchParams.get('site');
     const serviceName = searchParams.get('serviceName');
+    const siteName = searchParams.get('siteName');
     const purpose = searchParams.get('purpose');
     const fields = searchParams.get('fields');
     const privacyUrl = searchParams.get('privacyUrl');
     const sourceUrl = searchParams.get('sourceUrl');
+    const websiteUrl = searchParams.get('websiteUrl');
     const returnUrl = searchParams.get('returnUrl');
     const expiryDate = searchParams.get('expiryDate');
 
@@ -67,9 +70,10 @@ export default function ShareData() {
       fields: parsedFields,
       privacyUrl: privacyUrl || '',
       sourceUrl: sourceUrl || '',
-      siteName: site || serviceName || '',
+      siteName: siteName || site || serviceName || '',
       expiryDate: expiryDate || '',
-      returnUrl: returnUrl || ''
+      returnUrl: returnUrl || '',
+      websiteUrl: websiteUrl || sourceUrl || ''
     }));
   }, [searchParams]);
 
@@ -103,7 +107,7 @@ export default function ShareData() {
         recipient: formData.recipient,
         purpose: formData.purpose,
         expiryDate: formData.expiryDate,
-        website: formData.sourceUrl || formData.siteName,
+        website: formData.websiteUrl || formData.sourceUrl || formData.siteName,
         dataFields: formData.fields.join(', ')
       };
 
@@ -113,11 +117,12 @@ export default function ShareData() {
       // Redirect after success
       setTimeout(() => {
         if (formData.returnUrl) {
+          console.log('Redirecting back to:', formData.returnUrl);
           window.location.href = formData.returnUrl;
         } else {
           navigate('/my-consents');
         }
-      }, 2000);
+      }, 1500); // Reduced delay for better UX
       
     } catch (err) {
       setError('Failed to issue consent token. Please try again.');
@@ -289,24 +294,24 @@ export default function ShareData() {
                 </div>
                 <p className="mt-2 text-sm text-orange-300">
                   This consent was detected from your interaction on <strong>{formData.siteName}</strong>. 
-                  Review the details and set an expiry date to issue your blockchain consent token.
+                  After issuing the consent token, you'll be redirected back to continue browsing.
                 </p>
               </div>
             )}
 
-            {formData.sourceUrl && (
+            {formData.websiteUrl && (
               <div className="p-4 bg-white bg-opacity-5 border border-orange-500 border-opacity-20 rounded-md">
                 <div className="flex items-center space-x-2">
                   <Globe className="h-5 w-5 text-orange-400" />
-                  <span className="text-sm font-medium text-orange-200">Source Application</span>
+                  <span className="text-sm font-medium text-orange-200">Detected From</span>
                 </div>
                 <a
-                  href={formData.sourceUrl}
+                  href={formData.websiteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-2 inline-flex items-center space-x-1 text-sm text-orange-300 hover:text-orange-200"
                 >
-                  <span>Visit source application</span>
+                  <span>{formData.websiteUrl}</span>
                   <ExternalLink className="h-4 w-4" />
                 </a>
               </div>

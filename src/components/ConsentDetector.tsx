@@ -59,12 +59,14 @@ export const ConsentDetector: React.FC<ConsentDetectorProps> = ({ onConsentDetec
     // Create URL parameters for autofill
     const params = new URLSearchParams({
       to: consentData.recipientAddress,
-      website: window.location.href,
+      website: window.location.hostname,
+      websiteUrl: window.location.href,
       purpose: consentData.purpose,
       fields: consentData.dataTypes.join(','),
       privacyUrl: consentData.privacyPolicyUrl || window.location.href,
       sourceUrl: window.location.href,
-      returnUrl: window.location.href
+      returnUrl: window.location.href,
+      siteName: consentData.siteName
     });
     
     // Navigate to autofill consent page

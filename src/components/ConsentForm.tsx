@@ -83,12 +83,13 @@ export const ConsentForm: React.FC<ConsentFormProps> = ({ onSubmit, loading, con
       setTimeout(() => {
         setSuccess(false);
         if (autofill?.returnUrl) {
+          console.log('Redirecting back to original page:', autofill.returnUrl);
           window.location.href = autofill.returnUrl;
         } else {
           // Navigate to my consents page after successful submission
           window.location.href = '/my-consents';
         }
-      }, 2000);
+      }, 1500); // Reduced delay for better UX
     } catch (error) {
       console.error('Error submitting form:', error);
       const errorMessage = formatTransactionError(error);

@@ -566,12 +566,14 @@ class ConsentDetector {
     // Create URL parameters for autofill
     const params = new URLSearchParams({
       to: consentData.recipientAddress,
-      website: window.location.href, // Use the actual page URL for autofill
+      website: window.location.hostname, // Use hostname for website field
+      websiteUrl: window.location.href, // Full URL for reference
       purpose: consentData.purpose,
       fields: consentData.dataTypes.join(','),
       privacyUrl: consentData.privacyPolicyUrl || window.location.href,
       sourceUrl: window.location.href,
-      returnUrl: window.location.href // Add returnUrl for redirect
+      returnUrl: window.location.href, // Add returnUrl for redirect back
+      siteName: consentData.siteName
     });
     
     // Open Consent Wallet in the current tab (not a new tab)
